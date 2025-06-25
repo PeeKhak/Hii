@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Machine Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .slot-machine {
+            background-color: #fff;
+            border: 5px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .reels {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .reel {
+            width: 100px;
+            height: 100px;
+            background-color: #eee;
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #balance {
+            margin-top: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slot-machine">
+        <h1>Slot Machine</h1>
+        <div class="reels">
+            <div class="reel" id="reel1">?</div>
+            <div class="reel" id="reel2">?</div>
+            <div class="reel" id="reel3">?</div>
+        </div>
+        <button id="spinButton">Spin (10 Coins)</button>
+        <button id="playTenButton">Play 10 Times</button>
+        <div id="balance">Balance: 100 Coins</div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const symbols = ['🍒', '🍋', '🍊', '🍇', '🔔', '⭐', '💎'];
+        const reels = [
+            document.getElementById('reel1'),
+            document.getElementById('reel2'),
+            document.getElementById('reel3')
+        ];
+        const spinButton = document.getElementById('spinButton');
+        const playTenButton = document.getElementById('playTenButton');
+        const balanceDisplay = document.getElementById('balance');
+        const resultDisplay = document.getElementById('result');
+        let balance = 100;
+        let isSpinning = false;
+
+        // Create a simple sound effect
+        function playSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+            oscillator.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Spin the reels
+        function spin() {
+            if (isSpinning) return;
+            if (balance < 10) {
+                resultDisplay.textContent = 'Insufficient balance!';
+                return;
+            }
+
+            isSpinning = true;
+            spinButton.disabled = true;
+            playTenButton.disabled = true;
+            balance -= 10;
+            balanceDisplay.textContent = `Balance: ${balance} Coins`;
+            resultDisplay.textContent = '';
+
+            // Animate reels
+            let spins = 20;
+            let spinInterval = setInterval(() => {
+                reels.forEach(reel => {
+                    reel.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+                });
+                spins--;
+                if (spins <= 0) {
+                    clearInterval(spinInterval);
+                    checkWin();
+                    isSpinning = false;
+                    spinButton.disabled = balance < 10;
+                    playTenButton.disabled = balance < 100;
+                }
+            }, 100);
+
+            playSound();
+        }
+
+        // Check for winning combinations
+        function checkWin() {
+            const result = reels.map(reel => reel.textContent);
+            let message = '';
+            let winnings = 0;
+
+            if (result[0] === result[1] && result[1] === result[2]) {
+                winnings = 50; // Three matching symbols
+                message = `Jackpot! You won ${winnings} coins!`;
+            } else if (result[0] === result[1] || result[1] === result[2] || result[0] === result[2]) {
+                winnings = 20; // Two matching symbols
+                message = `Nice! You won ${winnings} coins!`;
+            } else {
+                message = 'Try again!';
+            }
+
+            balance += winnings;
+            balanceDisplay.textContent = `Balance: ${balance} Coins`;
+            resultDisplay.textContent = message;
+        }
+
+        // Play 10 times automatically
+        async function playTenTimes() {
+            if (balance < 100) {
+                resultDisplay.textContent = 'Need at least 100 coins to play 10 times!';
+                return;
+            }
+
+            for (let i = 0; i < 10; i++) {
+                if (balance < 10) {
+                    resultDisplay.textContent = 'Stopped: Insufficient balance!';
+                    break;
+                }
+                spin();
+                // Wait for the spin to complete (2 seconds)
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        // Event listeners
+        spinButton.addEventListener('click', spin);
+        playTenButton.addEventListener('click', playTenTimes);
+
+        // Initial button state
+        playTenButton.disabled = balance < 100;
+    </script>
+</body>
+</html>
